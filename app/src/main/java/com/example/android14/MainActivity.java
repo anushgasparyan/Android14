@@ -1,13 +1,13 @@
 package com.example.android14;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.net.Uri;
+import android.content.DialogInterface;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,15 +19,11 @@ import android.widget.Toast;
 import com.firebase.ui.database.FirebaseRecyclerAdapter;
 import com.firebase.ui.database.FirebaseRecyclerOptions;
 import com.firebase.ui.database.SnapshotParser;
-import com.google.firebase.FirebaseOptions;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.Query;
 import com.squareup.picasso.Picasso;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
     RecyclerView recyclerView;
     private LinearLayoutManager linearLayoutManager;
     private FirebaseRecyclerAdapter adapter;
+    AlertDialog.Builder builder;
     DatabaseReference databaseReference;
 
     @Override
@@ -47,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
         editText1 = findViewById(R.id.editText1);
         editText2 = findViewById(R.id.editText2);
         recyclerView = findViewById(R.id.recycleView);
-
+        builder = new AlertDialog.Builder(this);
         linearLayoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(linearLayoutManager);
         recyclerView.setHasFixedSize(true);
@@ -61,6 +58,8 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 String title = String.valueOf(editText1.getText());
                 String description = String.valueOf(editText2.getText());
+                editText1.setText("");
+                editText2.setText("");
                 databaseReference = FirebaseDatabase.getInstance().getReference("books").push();
                 Model model = new Model();
                 model.setId(databaseReference.getKey());
@@ -86,29 +85,58 @@ public class MainActivity extends AppCompatActivity {
                             }
                         })
                         .build();
-        adapter = new FirebaseRecyclerAdapter<Model, NewClass>(options) {
+        adapter = new FirebaseRecyclerAdapter<Model, BaseAdapter>(options) {
             @Override
-            public NewClass onCreateViewHolder(ViewGroup parent, int viewType) {
+            public BaseAdapter onCreateViewHolder(ViewGroup parent, int viewType) {
                 View view = LayoutInflater.from(parent.getContext())
                         .inflate(R.layout.adapter, parent, false);
-                return new NewClass(view);
+                return new BaseAdapter(view);
             }
 
             @Override
-            protected void onBindViewHolder(NewClass holder, final int position, Model model) {
+            protected void onBindViewHolder(final BaseAdapter holder, final int position, final Model model) {
                 holder.setDesc(model.getDesc());
                 holder.setTitle(model.getTitle());
 
-                holder.root.setOnClickListener(new View.OnClickListener() {
+                holder.clear.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        Toast.makeText(MainActivity.this, String.valueOf(position), Toast.LENGTH_SHORT).show();
+                        FirebaseDatabase.getInstance().getReference().child("books").child(model.getId()).removeValue();
+                    }
+                });
+                holder.edit.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        View view = getLayoutInflater().inflate(R.layout.alert, null);
+                        final EditText newTitle = view.findViewById(R.id.newtitle);
+                        final EditText newDesc = view.findViewById(R.id.newdesc);
+                        newTitle.setText(model.getTitle());
+                        newDesc.setText(model.getDesc());
+                        builder.setTitle("Edit the title and the description")
+                                .setView(view)
+                                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        String s1 = String.valueOf(newTitle.getText());
+                                        String s2 = String.valueOf(newDesc.getText());
+                                        FirebaseDatabase.getInstance().getReference().child("books").child(model.getId()).setValue(new Model(model.getId(), s1, s2));
+                                        dialog.cancel();
+                                    }
+                                }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                Toast.makeText(getApplicationContext(), "Cancelled", Toast.LENGTH_LONG).show();
+                                dialog.cancel();
+                            }
+                        });
+                        AlertDialog alertDialog = builder.create();
+                        alertDialog.show();
+
                     }
                 });
             }
 
         };
-        Toast.makeText(MainActivity.this, ".valueOf(position)", Toast.LENGTH_SHORT).show();
         recyclerView.setAdapter(adapter);
     }
 
