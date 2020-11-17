@@ -15,6 +15,8 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 
+import java.util.Objects;
+
 public class LoginActivity extends AppCompatActivity {
     EditText email, password;
     FirebaseAuth auth;
@@ -36,8 +38,12 @@ public class LoginActivity extends AppCompatActivity {
                     if (!task.isSuccessful()){
                         Toast.makeText(getApplicationContext(), "Wrong email or password", Toast.LENGTH_LONG).show();
                     }else {
-                        Intent intent = new Intent(LoginActivity.this, ProfileActivity.class);
-                        startActivity(intent);
+                        if (Objects.requireNonNull(auth.getCurrentUser()).isEmailVerified()) {
+                            Intent intent = new Intent(LoginActivity.this, ProfileActivity.class);
+                            startActivity(intent);
+                        }else {
+                            Toast.makeText(getApplicationContext(), "Not verified", Toast.LENGTH_LONG).show();
+                        }
                     }
                 }
             });
@@ -46,6 +52,11 @@ public class LoginActivity extends AppCompatActivity {
 
     public void go_to_signup(View view) {
         Intent intent = new Intent(LoginActivity.this, RegisterActivity.class);
+        startActivity(intent);
+    }
+
+    public void forget(View view) {
+        Intent intent = new Intent(LoginActivity.this, ForgetPassword.class);
         startActivity(intent);
     }
 }
